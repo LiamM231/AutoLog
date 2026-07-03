@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15171a">
+<title>AutoLog — יומן רכב חכם</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<!-- ===================== מסך התחברות ===================== -->
+<div id="screen-auth" class="screen active">
+  <div class="auth-wrap">
+    <div class="brand-icon-wrap" style="margin:0 auto 14px;">
+      <img src="icons/logo-header.png" class="brand-icon" alt="AutoLog" style="width:56px;height:56px;">
+    </div>
+    <div class="brand-name" style="text-align:center;font-size:34px;">AutoLog</div>
+    <p class="hint" style="text-align:center;margin:6px 0 28px;">התחברות עם קישור לאימייל - בלי סיסמה לזכור</p>
+    <div class="field">
+      <label>אימייל</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" style="font-family:var(--font-body);" autocomplete="email">
+    </div>
+    <div class="page-pad" style="padding-top:0;">
+      <button class="btn-primary" onclick="sendMagicLink()">שליחת קישור כניסה</button>
+    </div>
+    <div id="auth-status" style="padding:0 20px;"></div>
+  </div>
+</div>
+
+<!-- ===================== מסך הבית ===================== -->
+<div id="screen-home" class="screen">
+
+  <div class="brand-header">
+    <div class="brand-row">
+      <div class="brand-icon-wrap">
+        <img src="icons/logo-header.png" class="brand-icon" alt="AutoLog">
+      </div>
+      <div>
+        <span class="brand-name">AutoLog</span>
+        <div class="brand-tagline-row">
+          <span class="brand-tagline">יומן רכב חכם</span>
+          <span class="ai-badge">AI</span>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="signOut()" aria-label="התנתקות" style="margin-left:auto;"><i class="ti ti-logout" style="font-size:16px;"></i></button>
+    </div>
+  </div>
+
+  <div id="home-empty" class="empty-state" style="display:none;">
+    <p>בואו נתחיל - הוסיפו את הרכב הראשון שלכם ⛽</p>
+    <button class="btn-primary" style="width:auto;padding:12px 24px;" onclick="goTo('add-vehicle')">הוספת רכב ראשון</button>
+  </div>
+
+  <div id="home-content" style="display:none;">
+    <div class="topbar">
+      <span id="plate-badge" class="plate-badge"><span class="plate-flag"></span><span id="plate-number">12-345-67</span></span>
+      <button class="icon-btn" onclick="goTo('add-vehicle')" aria-label="הוספת רכב">+</button>
+    </div>
+
+
+    <div class="vehicle-photo-wrap" id="vehicle-photo-wrap" onclick="triggerVehiclePhoto()">
+      <img id="vehicle-photo-img" style="display:none;" alt="תמונת הרכב">
+      <div id="vehicle-photo-placeholder" class="vehicle-photo-placeholder">
+        <span class="photo-icon">＋</span>
+        <span>הוספת תמונת רכב</span>
+      </div>
+      <div id="vehicle-photo-loading" class="vehicle-photo-loading" style="display:none;">מסיר רקע…</div>
+    </div>
+    <input type="file" id="vehicle-photo-input" accept="image/*" style="display:none;" onchange="onVehiclePhotoSelected(event)">
+
+    <div class="vehicle-name" id="vehicle-name">מאזדה 3</div>
+    <div class="vehicle-sub" id="vehicle-sub">2019 · בנזין · אפור מטאלי</div>
+    <div class="vin-row">
+      <span onclick="editVin()" id="vin-display" style="display:flex;align-items:center;gap:6px;">+ הוספת מספר שלדה (VIN)<i class="ti ti-pencil" style="font-size:12px;"></i></span>
+      <a href="https://www.govcar.co.il/" target="_blank" rel="noopener" class="vin-lookup-link">איתור לפי מספר רישוי ↗</a>
+    </div>
+
+    <div class="metric-strip">
+      <div class="metric">
+        <div class="metric-label">סה״כ הוצאות</div>
+        <div class="metric-value" id="metric-total">0 ₪</div>
+      </div>
+      <div class="metric" onclick="editCurrentKm()" style="cursor:pointer;">
+        <div class="metric-label">ק״מ נוכחי <span class="edit-pencil">✎</span></div>
+        <div class="metric-value" id="metric-km">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">טיפול הבא</div>
+        <div class="metric-value brass" id="metric-next">—</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <span class="section-title">ספר רכב</span>
+      <button class="text-link" onclick="triggerServiceBook()">+ העלאת עמודים</button>
+    </div>
+    <input type="file" id="service-book-input" accept="image/*" multiple style="display:none;" onchange="onServiceBookSelected(event)">
+    <div id="service-book-list" class="service-book-list"></div>
+    <div id="service-book-analyze-wrap" style="display:none;padding:0 20px 16px;">
+      <button class="btn-secondary" onclick="analyzeServiceBook()">
+        <span class="ai-spark">✦</span> ניתוח עם AI וחילוץ מרווחי טיפול
+      </button>
+      <div id="service-book-analyze-status"></div>
+    </div>
+    <p class="hint" id="service-book-hint" style="display:none;">התמונות נשמרות ברכב. לחצו על הכפתור למעלה כדי שה-AI יקרא את טבלת התחזוקה ויעדכן את ציר הטיפולים אוטומטית.</p>
+
+    <div class="section-head">
+      <span class="section-title">ציר טיפולים</span>
+    </div>
+    <div class="gauge-wrap" id="gauge-scroll">
+      <div class="gauge" id="gauge"></div>
+    </div>
+    <div class="gauge-legend">
+      <span><span class="legend-dot" style="background:var(--signal-green)"></span>בוצע</span>
+      <span><span class="legend-dot" style="background:var(--signal-amber)"></span>מתקרב</span>
+      <span><span class="legend-dot" style="background:var(--signal-red)"></span>איחור</span>
+    </div>
+
+    <div class="section-head">
+      <span class="section-title">היסטוריית טיפולים</span>
+      <div style="display:flex;gap:14px;">
+        <button class="text-link" onclick="triggerExcelImport()">יבוא מאקסל</button>
+        <button class="text-link" onclick="goTo('add-record')">+ הוספה</button>
+      </div>
+    </div>
+    <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="onExcelSelected(event)">
+    <div id="excel-status"></div>
+    <div id="records-list"></div>
+
+    <div class="page-pad">
+      <button class="btn-secondary" onclick="exportServiceLog()">
+        <i class="ti ti-file-download" style="font-size:16px;vertical-align:-3px;margin-left:6px;"></i>
+        ייצוא ספר טיפולים (Excel)
+      </button>
+      <p class="hint" style="text-align:center;margin-top:8px;">קובץ מסודר עם כל היסטוריית הטיפולים - שימושי למכירת הרכב</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== מסך הוספת רכב ===================== -->
+<div id="screen-add-vehicle" class="screen">
+  <div class="header-row">
+    <button class="back-btn" onclick="goTo('home')">←</button>
+    <span class="header-title">הוספת רכב חדש</span>
+  </div>
+  <p class="hint" style="margin-top:8px;">הזינו מספר רישוי ונאתר את פרטי הרכב אוטומטית מול המאגר הפתוח של משרד התחבורה.</p>
+
+  <div class="field-row" style="grid-template-columns: 1fr auto;">
+    <div class="field">
+      <label>מספר רישוי</label>
+      <input type="text" id="plate-input" placeholder="12-345-67" inputmode="numeric">
+    </div>
+    <button class="btn-secondary" style="width:auto;padding:0 20px;align-self:end;height:46px;" onclick="lookupVehicle()">איתור</button>
+  </div>
+
+  <div id="lookup-status"></div>
+
+  <div id="lookup-result" style="display:none;">
+    <div class="info-card">
+      <div class="info-row"><span class="k">יצרן ודגם</span><span class="v" id="r-model"></span></div>
+      <div class="info-row"><span class="k">שנת ייצור</span><span class="v" id="r-year"></span></div>
+      <div class="info-row"><span class="k">צבע</span><span class="v" id="r-color"></span></div>
+      <div class="info-row"><span class="k">סוג דלק</span><span class="v" id="r-fuel"></span></div>
+    </div>
+    <p class="hint">ק״מ אחרון לא תמיד מדויק (מתעדכן רק בטסט) — אשרו או עדכנו ידנית.</p>
+    <div class="field">
+      <label>ק״מ נוכחי</label>
+      <input type="number" id="r-km">
+    </div>
+    <div class="page-pad" style="padding-top:0;">
+      <button class="btn-primary" onclick="saveVehicle()">הוספת הרכב</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== מסך הוספת טיפול ===================== -->
+<div id="screen-add-record" class="screen">
+  <div class="header-row">
+    <button class="back-btn" onclick="goTo('home')">←</button>
+    <span class="header-title">תיעוד טיפול</span>
+  </div>
+
+  <div class="field-row" style="margin-top:14px;">
+    <div class="field">
+      <label>תאריך</label>
+      <input type="date" id="f-date">
+    </div>
+    <div class="field">
+      <label>ק״מ נוכחי</label>
+      <input type="number" id="f-km" placeholder="85200">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>מה הוחלף</label>
+    <input type="text" id="f-part" placeholder="למשל: מסנן שמן" style="font-family: var(--font-body);">
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label>מחיר (₪)</label>
+      <input type="number" id="f-price" placeholder="320">
+    </div>
+    <div class="field">
+      <label>מק״ט (אופציונלי)</label>
+      <input type="text" id="f-sku">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>בוצע על ידי</label>
+    <div class="segmented">
+      <button id="seg-garage" class="selected" onclick="selectProvider('garage')">מוסך</button>
+      <button id="seg-self" onclick="selectProvider('self')">עצמי</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>צילום קבלה (אופציונלי)</label>
+    <div class="receipt-upload" id="receipt-upload" onclick="triggerReceiptPhoto()">
+      <img id="receipt-preview" style="display:none;" alt="תמונת קבלה">
+      <div id="receipt-placeholder">
+        <span class="photo-icon">📷</span>
+        <span>הוספת צילום קבלה</span>
+      </div>
+    </div>
+    <input type="file" id="receipt-input" accept="image/*" style="display:none;" onchange="onReceiptSelected(event)">
+    <div id="receipt-process-status"></div>
+  </div>
+
+  <div class="page-pad">
+    <button class="btn-primary" onclick="saveRecord()">שמירת התיעוד</button>
+  </div>
+</div>
+
+<div class="part-modal-overlay" id="part-modal-overlay" onclick="closePartModal()">
+  <div class="part-modal" onclick="event.stopPropagation()">
+    <button class="part-modal-close" onclick="closePartModal()" aria-label="סגירה">✕</button>
+    <div class="part-modal-icon" id="part-modal-icon"></div>
+    <h3 class="part-modal-title" id="part-modal-title"></h3>
+    <p class="part-modal-sub" id="part-modal-sub"></p>
+    <p class="hint" id="part-modal-disclaimer" style="margin:12px 0 16px;"></p>
+    <div id="part-modal-links" class="part-modal-links"></div>
+  </div>
+</div>
+
+<div class="install-hint" id="install-hint">
+  <span>התקינו את האפליקציה על מסך הבית לגישה מהירה</span>
+  <button onclick="dismissInstallHint()">סגירה</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
