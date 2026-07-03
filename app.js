@@ -1,7 +1,7 @@
 // ===================== auth + cloud storage (Supabase) =====================
 // יש להחליף בערכים האמיתיים מהפרויקט שלכם ב-supabase.com (Settings -> API)
-const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';
+const SUPABASE_URL = 'https://fdkwyryxzfnxauvlpdom.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_d1gbjF5qhokri9AuyToZaQ_lpFFMSQq';
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
